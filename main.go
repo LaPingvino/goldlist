@@ -4,32 +4,84 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/lapingvino/readline"
+	"io/ioutil"
 	"os"
 	"time"
 )
 
 func main() {
 	lists := getLists()
-	// Show lists that are to do
-	// Option to distill list for those
-	// Option to add new list
-	newList(lists)
+	categories := countCategories(lists)
+	datelists := byDate(lists)
+	todolists, nodo := filter(datelists)
+	if len(todolists) > 0 {
+		// Show lists that are to do and distill them
+		lists = distill(todolists, nodo)
+	} else {
+		newList(lists, categories)
+	}
 }
 
 func getLists() []List {
-	return []List{}
+	js, err := ioutil.ReadFile("goldlist.json")
+	if err != nil {
+		return []List{}
+	}
+	var goldlists Goldlist
+	json.Unmarshal(js, &goldlists)
+	return goldlists.Lists
 }
 
-func newList(lists []List) {
+func byDate(lists []List) map[time.Time]List {
+	datelists := map[time.Time]List{}
+	for _, l := range lists {
+		datelists[l.Date] = l
+	}
+	return datelists
+}
+
+func filter(datelists map[time.Time]List) (map[time.Time]List, []List) {
+	now := map[time.Time]List{}
+	nodo := []List{}
+	for k, l := range datelists {
+		if time.Now().Unix() > k.AddDate(0, 0, 14).Unix() && l.Distill > -1 {
+			now[k] = l
+		} else {
+			nodo = append(nodo, l)
+		}
+	}
+	return now, nodo
+}
+
+func countCategories(lists []List) (categories map[string]int) {
+	categories = map[string]int{}
+	for _, v := range lists {
+		categories[v.Category]++
+	}
+	return categories
+}
+
+func distill(todo map[time.Time]List, nodo []List) []List {
+	return nodo
+}
+
+func newList(lists []List, categories map[string]int) {
 	fmt.Println("Cool! We are going to learn new stuff!")
-	category := chooseCategory()
+	category := chooseCategory(categories)
 	list := inputList()
-	saveList(category, list, 0, lists)
-	fmt.Println("Done! Doesn't that feel good?")
+	if len(list) > 0 {
+		saveList(category, list, 0, lists)
+		fmt.Println("Done! Doesn't that feel good?")
+	} else {
+		fmt.Println("Well then... Maybe we add some words another day?")
+	}
 }
 
-func chooseCategory() string {
+func chooseCategory(categories map[string]int) string {
 	fmt.Println("Choose one from your existing categories or choose a new one:")
+	for cat, n := range categories {
+		fmt.Printf(" %v (%v entries)\n", cat, n)
+	}
 	var category string
 	readline.Get(&category)
 	return category
@@ -45,7 +97,7 @@ func inputList() []string {
 		fmt.Printf("%v: ", i)
 		readline.Get(&v)
 	}
-	return list
+	return list[:len(list)-1]
 }
 
 type Goldlist struct {
