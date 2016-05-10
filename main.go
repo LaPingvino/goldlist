@@ -40,12 +40,19 @@ func byDate(lists []List) map[time.Time]List {
 	return datelists
 }
 
-func filter(datelists map[time.Time]List) (map[time.Time]List, []List) {
-	now := map[time.Time]List{}
-	nodo := []List{}
-	for k, l := range datelists {
-		if time.Now().Unix() > k.AddDate(0, 0, 14).Unix() && l.Distill > -1 {
-			now[k] = l
+type mydate []time.Time
+
+func (t mydate) Len() int {
+	return len(t)
+}
+
+func filter(datelists map[time.Time]List) (now []List, nodo []List) {
+	now = []List{}
+	nodo = []List{}
+
+	for _, l := range datelists {
+		if time.Now().Unix() > l.Date.AddDate(0, 0, 14).Unix() && l.Distill > -1 {
+			now = append(now, l)
 		} else {
 			nodo = append(nodo, l)
 		}
@@ -61,8 +68,8 @@ func countCategories(lists []List) (categories map[string]int) {
 	return categories
 }
 
-func distill(todo map[time.Time]List, nodo []List) []List {
-	return nodo
+func distill(todo []List, nodo []List) []List {
+	return append(todo, nodo...)
 }
 
 func newList(lists []List, categories map[string]int) {
