@@ -7,13 +7,13 @@ import (
 	"io/ioutil"
 	"os"
 	"time"
+	"sort"
 )
 
 func main() {
 	lists := getLists()
 	categories := countCategories(lists)
-	datelists := byDate(lists)
-	todolists, nodo := filter(datelists)
+	todolists, nodo := filter(lists)
 	if len(todolists) > 0 {
 		// Show lists that are to do and distill them
 		lists = distill(todolists, nodo)
@@ -32,21 +32,20 @@ func getLists() []List {
 	return goldlists.Lists
 }
 
-func byDate(lists []List) map[time.Time]List {
-	datelists := map[time.Time]List{}
-	for _, l := range lists {
-		datelists[l.Date] = l
-	}
-	return datelists
+func (t *Goldlist) Len() int {
+	return len(t.Lists)
 }
 
-type mydate []time.Time
-
-func (t mydate) Len() int {
-	return len(t)
+func (t *Goldlist) Less(i,j int) bool {
+	return t.Lists[i].Date.Unix() < t.Lists[j].Date.Unix()
 }
 
-func filter(datelists map[time.Time]List) (now []List, nodo []List) {
+func (t *Goldlist) Swap(i,j int) {
+	t.Lists[i], t.Lists[j] = t.Lists[j], t.Lists[i]
+}
+
+func filter(datelists []List) (now []List, nodo []List) {
+	sort.Sort(&Goldlist{datelists})
 	now = []List{}
 	nodo = []List{}
 
